@@ -1,0 +1,5 @@
+package com.example.didirooms2
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity()
