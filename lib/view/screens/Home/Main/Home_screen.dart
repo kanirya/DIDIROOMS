@@ -1,10 +1,14 @@
+import 'dart:developer';
+
 import 'package:awesome_icons/awesome_icons.dart';
 import 'package:didirooms2/view/screens/Home/Main/room_search.dart';
 import 'package:didirooms2/view/screens/Home/Main/search_place.dart';
+import 'package:didirooms2/view_models/provider/provider.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
@@ -77,6 +81,7 @@ class _homeScreenState extends State<homeScreen> {
 class Page1Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final ap=Provider.of<AuthProvider>(context,listen: false);
     return Scaffold(
         appBar: AppBar(
             centerTitle: true,
@@ -91,11 +96,13 @@ class Page1Screen extends StatelessWidget {
                 child: InkWell(
                   onTap: () {
                     Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => searchScreen(
-                                  cityName: '',
-                                )));
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SearchScreen(
+                          cityName: '',
+                        ),
+                      ),
+                    );
                   },
                   borderRadius: BorderRadius.circular(20.0),
                   splashColor: Colors.blueGrey.withOpacity(0.3),
@@ -137,7 +144,19 @@ class Page1Screen extends StatelessWidget {
                       children: [
                         circularPlaceCard(
                             placeName: "Near by",
-                            function: () {},
+                            function: () {
+                              ap.getCurrentLocation().then((onValue){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => NearbyRoomsScreen(
+                                      Rlocation: LatLng(ap.currentPosition!.latitude, ap.currentPosition!.longitude),
+                                    ),
+                                  ),
+                                );
+                              });
+
+                            },
                             icon: Icons.near_me,
                             backgroundColor: Color(0xffded2d2),
                             iconSize: 30,

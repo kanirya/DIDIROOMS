@@ -1,11 +1,12 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:didirooms2/view_models/provider/user_model.dart';
+import 'package:didirooms2/view_models/Model/user_model.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../res/components/custom.dart';
@@ -27,6 +28,17 @@ class AuthProvider extends ChangeNotifier {
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
+
+
+  Position? _currentPosition;
+  Position? get currentPosition => _currentPosition;
+
+
+  LocationProvider() {
+    getCurrentLocation();
+  }
+
+
 
 
 
@@ -190,4 +202,26 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     sp.clear();
   }
+
+
+
+  // Location Provider
+  Future<void> getCurrentLocation() async {
+
+
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
+      _currentPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+    }
+
+  }
+
 }

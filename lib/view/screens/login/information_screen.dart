@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../view_models/provider/provider.dart';
 import '../Home/Main/Home_screen.dart';
-import '../../../view_models/provider/user_model.dart';
+import '../../../view_models/Model/user_model.dart';
 
 class informationScreen extends StatefulWidget {
   const informationScreen({super.key});

@@ -48,12 +48,15 @@ dependencies:
   shared_preferences: ^2.3.2
   awesome_icons: ^1.1.0
   modern_form_line_awesome_icons: ^2.0.1
-  geolocator: ^9.0.2
+  geolocator: ^13.0.1
   carousel_slider: ^5.0.0
   google_maps_flutter: ^2.9.0
   http: ^1.2.2
   smooth_page_indicator: ^1.2.0+3
   table_calendar: ^3.1.2
+  permission_handler: ^11.3.1
+
+
 
 dev_dependencies:
   flutter_test:

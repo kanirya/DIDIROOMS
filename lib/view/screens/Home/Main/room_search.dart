@@ -32,7 +32,7 @@ class _NearbyRoomsScreenState extends State<NearbyRoomsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchRoomTypes(); // Fetch the room types when the screen loads
+    _fetchRoomTypes();
   }
 
   // Fetch room types from Firestore and update roomTypes list
