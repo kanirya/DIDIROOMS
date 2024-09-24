@@ -82,8 +82,6 @@ class _NearbyRoomsScreenState extends State<NearbyRoomsScreen> {
         roomLocation.longitude,
       );
       int roomPrice = int.parse(doc['price']);
-
-      // Apply all filters: distance, room type, and price range
       if (distance <= 25 &&
           (_selectedRoomType == 'All' || doc['roomType'] == _selectedRoomType) &&
           roomPrice >= _selectedPriceRange.start &&
@@ -109,14 +107,33 @@ class _NearbyRoomsScreenState extends State<NearbyRoomsScreen> {
       rooms.shuffle();
     }
   }
+  int getAvailableRooms(Map<String, dynamic> roomData) {
+    // Check if roomAvailability exists and has a value for 'available'
+    if (roomData.containsKey('roomAvailability') && roomData['roomAvailability'] != null) {
+      Map<String, dynamic> roomAvailability = roomData['roomAvailability'];
+      if (roomAvailability.containsKey('available') && roomAvailability['available'] != null) {
+        // Return the available number of rooms
+        return roomAvailability['available'];
+      }
+    }
+
+    // If roomAvailability or 'available' is missing, return total rooms count
+    if (roomData.containsKey('rooms') && roomData['rooms'] != null) {
+      return int.parse(roomData['rooms']);  // Assuming rooms is stored as a string, convert it to an int
+    }
+
+    // Default to 0 if no data is available
+    return 0;
+  }
 
   Widget _buildRoomCard(DocumentSnapshot room, double distance) {
     List<dynamic> imageUrls = room['imageUrl'];
-    List<String> imageUrl = List<String>.from(imageUrls); // Cast to List<String>
+    List<String> imageUrl = List<String>.from(imageUrls);
     Map<String, dynamic> services = room['Services'];
     Map<String, dynamic> location = room['location'];
     String price = room['price'];
     String roomType = room['roomType'];
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -130,7 +147,9 @@ class _NearbyRoomsScreenState extends State<NearbyRoomsScreen> {
                 roomId: room.id,
                 price: room['price'],
                 location: room['location'],
-                services: room['Services'], // Passing services data
+                services: room['Services'],
+                ownerId: room['ownerId'],
+                roomType: room['roomType'],
               ),
             ),
           );
