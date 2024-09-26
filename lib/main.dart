@@ -1,4 +1,5 @@
 
+import 'package:didirooms2/utils/global/global_variables.dart';
 import 'package:didirooms2/view/screens/login/splash.dart';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Flutter Demo',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.yellowAccent),
+          colorScheme: ColorScheme.fromSeed(seedColor: mainColor),
           useMaterial3: true,
 
 

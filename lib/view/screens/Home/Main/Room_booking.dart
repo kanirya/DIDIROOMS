@@ -1,7 +1,11 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:didirooms2/utils/global/global_variables.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../res/components/button_components.dart';
 
 class RoomBookingCalendar extends StatefulWidget {
   final String roomId;
@@ -33,7 +37,9 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
   DateTime? checkoutDate;
   Map<DateTime, int>? availableRooms;
   bool showAllRooms = false;
-
+  int roomCount = 1;
+  int maxRoomCount = 10; // Maximum available rooms
+  int currentImageIndex = 0;
   @override
   void initState() {
     super.initState();
@@ -63,10 +69,11 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
     DateTime now = DateTime.now();
     DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      initialDateRange: selectedDateRange ?? DateTimeRange(
-        start: now,
-        end: now.add(Duration(days: 1)),
-      ),
+      initialDateRange: selectedDateRange ??
+          DateTimeRange(
+            start: now,
+            end: now.add(Duration(days: 1)),
+          ),
       firstDate: now,
       lastDate: DateTime(now.year + 2),
     );
@@ -91,26 +98,36 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
 
         if (availabilitySnapshot.exists) {
           Map<String, dynamic> availabilityData =
-          availabilitySnapshot.data() as Map<String, dynamic>;
+              availabilitySnapshot.data() as Map<String, dynamic>;
 
           Map<String, dynamic> roomAvailability =
               availabilityData['roomAvailability'] ?? {};
 
           int totalRooms = int.parse(availabilityData['rooms'] ?? '0');
           availableRooms = {};
+          maxRoomCount = totalRooms; // Set the maximum available rooms
+          setState(() {
+            if(roomCount>totalRooms){
+            roomCount=totalRooms;}
+          });
 
           // Loop through the selected date range
           for (DateTime date = selectedDateRange!.start;
-          date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
-          date = date.add(Duration(days: 1))) {
+              date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
+              date = date.add(Duration(days: 1))) {
             String dateKey = date.toIso8601String().split("T").first;
 
-            // Check for available rooms on that date
+            // Check if the selected date exists in roomAvailability
             if (roomAvailability.containsKey(dateKey)) {
-              int availableCount = roomAvailability[dateKey]['available'] ?? 0;
+              // Date is found, show the available rooms for that date
+              int availableCount =
+                  roomAvailability[dateKey]['available'] is String
+                      ? int.parse(roomAvailability[dateKey]['available'])
+                      : roomAvailability[dateKey]['available'] ?? 0;
               availableRooms![date] = availableCount;
             } else {
-              availableRooms![date] = totalRooms; // Use total if no data
+              // Date is not found, show all rooms available
+              availableRooms![date] = totalRooms;
             }
           }
 
@@ -135,69 +152,63 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
       appBar: AppBar(
         title: Text(
           "Room Booking",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: GoogleFonts.poppins(
+              textStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ),
-        backgroundColor: Colors.blueGrey,
+        backgroundColor: Colors.teal[600],
       ),
       body: ownerData == null
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildImageCarousel(),
-            _buildImageThumbnails(),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _buildRoomDetails(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMainImage(),
+                  _buildImageThumbnails(),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _buildRoomDetails(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _buildDateSelection(),
+                  ),
+                  SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _buildRoomAvailability(),
+                  ),
+                  SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _buildServicesSection(),
+                  ),
+                  SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _buildOwnerDetails(),
+                  ),
+                ],
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildDateSelection(),
-            ),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildRoomAvailability(),
-            ),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildServicesSection(),
-            ),
-            SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildOwnerDetails(),
-            ),
-          ],
-        ),
-      ),
     );
   }
-
-  // Build the image carousel
-  Widget _buildImageCarousel() {
-    return CarouselSlider(
-      items: widget.imageUrls.map((url) {
-        return Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: NetworkImage(url),
-              fit: BoxFit.cover,
-            ),
+  Widget _buildMainImage() {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 2,
+            offset: Offset(0, 4),
           ),
-        );
-      }).toList(),
-      options: CarouselOptions(
-        height: 250,
-        enlargeCenterPage: true,
-        viewportFraction: 1.0,
-        onPageChanged: (index, reason) {
-          setState(() {
-            _currentImageIndex = index;
-          });
-        },
+        ],
+        image: DecorationImage(
+          image: NetworkImage(widget.imageUrls[_currentImageIndex]),
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
@@ -205,8 +216,8 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
   // Build image thumbnails
   Widget _buildImageThumbnails() {
     return Container(
-      height: 80,
-      margin: EdgeInsets.symmetric(vertical: 8),
+      height: 100,
+      margin: EdgeInsets.symmetric(vertical: 16),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: widget.imageUrls.length,
@@ -214,16 +225,17 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
           return GestureDetector(
             onTap: () {
               setState(() {
-                _currentImageIndex = index; // Update carousel index
+                _currentImageIndex = index; // Update the current index
               });
             },
             child: Container(
               width: 80,
               margin: EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _currentImageIndex == index
-                      ? Colors.blueGrey
+                      ? Colors.teal
                       : Colors.transparent,
                   width: 2,
                 ),
@@ -238,15 +250,19 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
       ),
     );
   }
-
   // Display room details
+  // Add this method inside your _RoomBookingCalendarState class
   Widget _buildRoomDetails() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Room Details (${widget.roomType})",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: GoogleFonts.poppins(
+              textStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.teal)),
         ),
         Divider(color: Colors.grey),
         SizedBox(height: 8),
@@ -257,11 +273,68 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
         SizedBox(height: 8),
         Text(
           "Price: Rs ${widget.price}",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
+          style: GoogleFonts.montserrat(
+            textStyle: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: mainColor,
+            ),
           ),
+        ),
+        SizedBox(height: 16), // Increased spacing for better visual
+        // Counter Widget
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Number of Rooms:",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.teal[50],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 5,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove, color: Colors.black),
+                    onPressed: () {
+                      setState(() {
+                        if (roomCount > 1) roomCount--;
+                      });
+                    },
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
+                    ),
+                    child: Text(
+                      '$roomCount',
+                      style: TextStyle(fontSize: 23, color: mainColor,fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add, color: Colors.black),
+                    onPressed: () {
+                      setState(() {
+                        if (roomCount < maxRoomCount) roomCount++; // Limit increment
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         SizedBox(height: 8),
         Text(
@@ -279,123 +352,208 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
       children: [
         Text(
           "Select Booking Dates",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: GoogleFonts.poppins(
+            textStyle: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 20, color: Colors.teal),
+          ),
         ),
         Divider(color: Colors.grey),
+
         SizedBox(height: 8),
-        ElevatedButton(
-          onPressed: selectDateRange,
-          child: Text('Select Date Range'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueGrey,
-          ),
+        CustomButton(
+          onPressed: () {
+            selectDateRange();
+          },
+          color: Colors.black87,
+          cornerRadius: 4,
+          text: "Select Date Range",
         ),
+        const SizedBox(height: 10,),
+        Text(
+          selectedDateRange != null
+              ? "${dateFormat.format(selectedDateRange!.start)}   to   ${dateFormat.format(selectedDateRange!.end)}"
+              : "Please select a date range",
+          style: TextStyle(fontSize: 16, color: Colors.black87,fontWeight: FontWeight.bold),
+        ),
+
         if (selectedDateRange != null) ...[
-          SizedBox(height: 8),
-          Text(
-            'Selected Dates: ${dateFormat.format(selectedDateRange!.start)} - ${dateFormat.format(selectedDateRange!.end)}',
-            style: TextStyle(fontSize: 16),
-          ),
           SizedBox(height: 4),
           Text(
             'Checkout Date: ${dateFormat.format(checkoutDate!)}',
-            style: TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 10,),
+          if(selectedDateRange!=null)
+            Text("Days: ${selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1}",style: GoogleFonts.montserrat(textStyle: TextStyle(fontWeight: FontWeight.bold,fontSize: 18)),),
+
         ],
       ],
     );
   }
 
-  // Build room availability section
+  // Display room availability
   Widget _buildRoomAvailability() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Room Availability",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: GoogleFonts.poppins(
+            textStyle: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 20, color: Colors.teal),
+          ),
         ),
         Divider(color: Colors.grey),
-        if (showAllRooms) ...[
-          Text(
-            'All Rooms Available',
-            style: TextStyle(color: Colors.green, fontSize: 16),
-          ),
-        ] else if (availableRooms != null && availableRooms!.isNotEmpty) ...[
-          for (var entry in availableRooms!.entries)
-            Text(
-              '${dateFormat.format(entry.key)}: ${entry.value} rooms available',
-              style: TextStyle(fontSize: 16),
-            ),
-        ] else ...[
-          Text(
-            'No availability for selected dates.',
-            style: TextStyle(color: Colors.red, fontSize: 16),
-          ),
-        ],
+        SizedBox(height: 8),
+        availableRooms == null
+            ? Text(
+                "Room availability data is not available.",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              )
+            : showAllRooms
+                ? Text(
+                    "All rooms are available for the selected dates.",
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  )
+                : Column(
+                    children: availableRooms!.entries
+                        .map((entry) => Text(
+                              "${dateFormat.format(entry.key)}: ${entry.value} rooms available",
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.blueGrey),
+                            ))
+                        .toList(),
+                  ),
       ],
     );
   }
 
-  // Build services section
+  // Services Section
   Widget _buildServicesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Services Offered",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          "Available Services",
+          style: GoogleFonts.poppins(
+              textStyle: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 20, color: Colors.teal)),
         ),
         Divider(color: Colors.grey),
-        ...widget.services.entries.map((entry) {
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(entry.key),
-            trailing: Text(entry.value.toString()),
-          );
-        }).toList(),
+        SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: widget.services.entries.map((entry) {
+              return entry.value
+                  ? _buildServiceIcon(_getServiceIcon(entry.key), entry.key)
+                  : SizedBox.shrink();
+            }).toList(),
+          ),
+        ),
       ],
     );
   }
 
+  Widget _buildServiceIcon(IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blueGrey[100],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 5,
+                  offset: Offset(2, 2),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.all(10),
+            child: Icon(
+              icon,
+              color: Colors.blueGrey,
+              size: 30,
+            ),
+          ),
+          SizedBox(height: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.blueGrey[700],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getServiceIcon(String serviceKey) {
+    switch (serviceKey) {
+      case 'AC':
+        return Icons.ac_unit;
+      case 'wifi':
+        return Icons.wifi;
+      case 'Food':
+        return Icons.restaurant;
+      case 'laundry':
+        return Icons.local_laundry_service;
+      case 'parking':
+        return Icons.local_parking;
+      case 'roomService':
+        return Icons.room_service;
+      case 'library':
+        return Icons.library_books;
+      case 'workStation':
+        return Icons.desktop_mac;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  // Display owner details
   Widget _buildOwnerDetails() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Owner Details",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          "Owner / Hotel Information",
+          style: GoogleFonts.poppins(
+              textStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.teal)),
         ),
         Divider(color: Colors.grey),
-        SizedBox(height: 8),
+        SizedBox(height: 10),
         Row(
           children: [
             CircleAvatar(
-              radius: 40,
-              backgroundImage: NetworkImage(ownerData!['imageUrl']),
+              radius: 30,
+              backgroundImage: NetworkImage(ownerData?['imageUrl']),
             ),
             SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ownerData!['name'],
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Phone: ${ownerData!['phone']}",
-                    style: TextStyle(fontSize: 16),
-                  ),
-
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ownerData?['name'] ?? '',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                Text("Phone: ${ownerData?['phone']}"),
+              ],
             ),
           ],
         ),
-
+        Divider(height: 20,thickness: 3,),
+        const SizedBox(height: 10,),
+        CustomButton(text: 'Book Now', cornerRadius: 5, color: mainColor, onPressed: (){}),
+        Divider(height: 20,thickness: 3,),
       ],
     );
   }
