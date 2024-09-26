@@ -1,11 +1,16 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:didirooms2/utils/global/global_variables.dart';
+import 'package:didirooms2/view_models/provider/provider.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../res/components/button_components.dart';
+import '../../../../utils/Utils/utils.dart';
+import 'booking_confirmed_screen.dart';
 
 class RoomBookingCalendar extends StatefulWidget {
   final String roomId;
@@ -40,10 +45,282 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
   int roomCount = 1;
   int maxRoomCount = 10; // Maximum available rooms
   int currentImageIndex = 0;
+  bool load = false;
+
   @override
   void initState() {
     super.initState();
     fetchOwnerData();
+  }
+  BuildContext? snackbarContext;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    snackbarContext = context; // Save the context safely
+  }
+
+  Future<void> bookNow() async {
+    final totalDays = selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1;
+    final totalPrice = int.parse(widget.price) * roomCount * totalDays;
+
+    final ap = Provider.of<AuthProvider>(context, listen: false);
+
+    if (selectedDateRange != null && availableRooms != null) {
+      setState(() {
+        load = true;
+      });
+
+      bool canBook = true;
+      String currentUserId = ap.userModel.uid;
+
+      // Check room availability
+      for (DateTime date = selectedDateRange!.start;
+      date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
+      date = date.add(Duration(days: 1))) {
+        int availableForDate = availableRooms?[date] ?? 0;
+
+        if (availableForDate < roomCount) {
+          canBook = false;
+          setState(() {
+            load = false;
+          });
+          break;
+        }
+      }
+
+      if (canBook) {
+        try {
+          DocumentReference roomRef = FirebaseFirestore.instance.collection('Rooms').doc(widget.roomId);
+          WriteBatch batch = FirebaseFirestore.instance.batch();
+
+          // Update availability
+          for (DateTime date = selectedDateRange!.start;
+          date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
+          date = date.add(Duration(days: 1))) {
+            String dateKey = date.toIso8601String().split("T").first;
+            int currentAvailable = availableRooms?[date] ?? maxRoomCount;
+
+            // Get current IDs to add duplicates
+            DocumentSnapshot roomSnapshot = await roomRef.get();
+
+            // Cast the snapshot data to a Map
+            Map<String, dynamic>? roomData = roomSnapshot.data() as Map<String, dynamic>?;
+            List<dynamic> currentIDs = roomData?['roomAvailability']?[dateKey]?['IDs'] ?? [];
+
+            // Create a new list with the existing IDs plus the new user ID for the number of rooms booked
+            List<dynamic> updatedIDs = List.from(currentIDs);
+
+            for (int i = 0; i < roomCount; i++) {
+              updatedIDs.add(currentUserId); // Add the user ID multiple times
+            }
+
+            // Update the room availability
+            Map<String, dynamic> updatedAvailability = {
+              'available': currentAvailable - roomCount,
+              'IDs': updatedIDs,
+            };
+
+            batch.update(roomRef, {
+              'roomAvailability.$dateKey': updatedAvailability,
+            });
+          }
+
+          await batch.commit();
+
+          // Store booking details
+          DatabaseReference bookingRef = FirebaseDatabase.instance.ref('Bookings/${widget.ownerId}/${currentUserId}').push();
+
+          Map<String, dynamic> bookingData = {
+            'roomId': widget.roomId,
+            'startDate': selectedDateRange!.start.toIso8601String().split("T").first,
+            'endDate': checkoutDate!.toIso8601String().split("T").first,
+            'numberOfRooms': roomCount,
+            'totalPrice': totalPrice,
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+
+          await bookingRef.set(bookingData).then((onValue) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => BookingConfirmed()),
+                  (Route<dynamic> route) => false,
+            );
+          });
+        } catch (e) {
+          setState(() {
+            load = false;
+          });
+          if (snackbarContext != null && mounted) {
+            CustomSnackbar.show(
+              snackbarContext!,
+              message: 'Booking failed! Please try again.',
+              backgroundColor: Colors.red,
+            );
+          }
+        }
+      } else {
+        setState(() {
+          load = false;
+        });
+        if (snackbarContext != null && mounted) {
+          CustomSnackbar.show(
+            snackbarContext!,
+            message: 'Not enough rooms available for the selected dates!',
+            backgroundColor: Colors.red,
+          );
+        }
+      }
+    }
+  }
+
+  void showBookingConfirmationDialog(BuildContext context) {
+    final ap = Provider.of<AuthProvider>(context, listen: false);
+    final selectedStartDate = selectedDateRange?.start;
+    final selectedEndDate = selectedDateRange?.end;
+    final totalDays = selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1 ?? 0;
+    final totalPrice = int.parse(widget.price) * roomCount * totalDays;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title
+                Text(
+                  "Confirm Your Booking",
+                  style: TextStyle(
+                    fontSize: 24.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 20.0),
+
+                // Booking Details
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Check-in:",
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                    Text(
+                      "${selectedStartDate?.toLocal().toString().split(' ')[0]}",
+                      style: TextStyle(
+                          fontSize: 16.0, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Check-out:",
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                    Text(
+                      "${checkoutDate?.toLocal().toString().split(' ')[0]}",
+                      style: TextStyle(
+                          fontSize: 16.0, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Total Nights:",
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                    Text(
+                      "$totalDays nights",
+                      style: TextStyle(
+                          fontSize: 16.0, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Number of Rooms:",
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                    Text(
+                      "$roomCount",
+                      style: TextStyle(
+                          fontSize: 16.0, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Total Price:",
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                    Text(
+                      "Rs${totalPrice}",
+                      style: TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20.0),
+
+                // Confirm Button
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  ),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await bookNow();
+                  },
+                  child: Text(
+                    "Confirm Booking",
+                    style: TextStyle(fontSize: 18.0, color: Colors.white),
+                  ),
+                ),
+
+                SizedBox(height: 10.0),
+
+                // Cancel Button
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context)
+                        .pop(); // Close the dialog without booking
+                  },
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(fontSize: 16.0, color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Fetch owner data from Firestore
@@ -107,8 +384,9 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
           availableRooms = {};
           maxRoomCount = totalRooms; // Set the maximum available rooms
           setState(() {
-            if(roomCount>totalRooms){
-            roomCount=totalRooms;}
+            if (roomCount > totalRooms) {
+              roomCount = totalRooms;
+            }
           });
 
           // Loop through the selected date range
@@ -148,51 +426,93 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Room Booking",
-          style: GoogleFonts.poppins(
-              textStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        ),
-        backgroundColor: Colors.teal[600],
-      ),
-      body: ownerData == null
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+    return load == true
+        ? Scaffold(
+            body: Center(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildMainImage(),
-                  _buildImageThumbnails(),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: _buildRoomDetails(),
+                  Text(
+                    "Please wait, We are on booking confirmation.",
+                    style: GoogleFonts.montserrat(
+                        textStyle: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: _buildDateSelection(),
+                  const SizedBox(
+                    height: 20,
                   ),
-                  SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: _buildRoomAvailability(),
-                  ),
-                  SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: _buildServicesSection(),
-                  ),
-                  SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: _buildOwnerDetails(),
-                  ),
+                  CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: mainColor,
+                  )
                 ],
               ),
             ),
-    );
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: Text(
+                "Room Booking",
+                style: GoogleFonts.poppins(
+                    textStyle:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ),
+              backgroundColor: Colors.teal[600],
+            ),
+            body: ownerData == null
+                ? Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMainImage(),
+                        _buildImageThumbnails(),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _buildRoomDetails(),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: _buildDateSelection(),
+                        ),
+                        SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: _buildRoomAvailability(),
+                        ),
+                        SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: _buildServicesSection(),
+                        ),
+                        SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: _buildOwnerDetails(),
+                        ),
+                        Divider(
+                          height: 20,
+                          thickness: 3,
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        CustomButton(
+                            text: 'Book Now',
+                            cornerRadius: 5,
+                            color: mainColor,
+                            onPressed: () {
+                              showBookingConfirmationDialog(context);
+                            }),
+                        Divider(
+                          height: 20,
+                          thickness: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+          );
   }
+
   Widget _buildMainImage() {
     return Container(
       height: 300,
@@ -250,6 +570,7 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
       ),
     );
   }
+
   // Display room details
   // Add this method inside your _RoomBookingCalendarState class
   Widget _buildRoomDetails() {
@@ -320,14 +641,18 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
                     ),
                     child: Text(
                       '$roomCount',
-                      style: TextStyle(fontSize: 23, color: mainColor,fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                          fontSize: 23,
+                          color: mainColor,
+                          fontWeight: FontWeight.w900),
                     ),
                   ),
                   IconButton(
                     icon: Icon(Icons.add, color: Colors.black),
                     onPressed: () {
                       setState(() {
-                        if (roomCount < maxRoomCount) roomCount++; // Limit increment
+                        if (roomCount < maxRoomCount)
+                          roomCount++; // Limit increment
                       });
                     },
                   ),
@@ -358,7 +683,6 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
           ),
         ),
         Divider(color: Colors.grey),
-
         SizedBox(height: 8),
         CustomButton(
           onPressed: () {
@@ -368,24 +692,32 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
           cornerRadius: 4,
           text: "Select Date Range",
         ),
-        const SizedBox(height: 10,),
+        const SizedBox(
+          height: 10,
+        ),
         Text(
           selectedDateRange != null
               ? "${dateFormat.format(selectedDateRange!.start)}   to   ${dateFormat.format(selectedDateRange!.end)}"
               : "Please select a date range",
-          style: TextStyle(fontSize: 16, color: Colors.black87,fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontSize: 16, color: Colors.black87, fontWeight: FontWeight.bold),
         ),
-
         if (selectedDateRange != null) ...[
           SizedBox(height: 4),
           Text(
             'Checkout Date: ${dateFormat.format(checkoutDate!)}',
-            style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 10,),
-          if(selectedDateRange!=null)
-            Text("Days: ${selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1}",style: GoogleFonts.montserrat(textStyle: TextStyle(fontWeight: FontWeight.bold,fontSize: 18)),),
-
+          const SizedBox(
+            height: 10,
+          ),
+          if (selectedDateRange != null)
+            Text(
+              "Days: ${selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1}",
+              style: GoogleFonts.montserrat(
+                  textStyle:
+                      TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ),
         ],
       ],
     );
@@ -437,7 +769,9 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
           "Available Services",
           style: GoogleFonts.poppins(
               textStyle: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 20, color: Colors.teal)),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.teal)),
         ),
         Divider(color: Colors.grey),
         SizedBox(height: 8),
@@ -550,10 +884,6 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
             ),
           ],
         ),
-        Divider(height: 20,thickness: 3,),
-        const SizedBox(height: 10,),
-        CustomButton(text: 'Book Now', cornerRadius: 5, color: mainColor, onPressed: (){}),
-        Divider(height: 20,thickness: 3,),
       ],
     );
   }
