@@ -52,6 +52,7 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
     super.initState();
     fetchOwnerData();
   }
+
   BuildContext? snackbarContext;
 
   @override
@@ -61,7 +62,8 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
   }
 
   Future<void> bookNow() async {
-    final totalDays = selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1;
+    final totalDays =
+        selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1;
     final totalPrice = int.parse(widget.price) * roomCount * totalDays;
 
     final ap = Provider.of<AuthProvider>(context, listen: false);
@@ -76,8 +78,8 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
 
       // Check room availability
       for (DateTime date = selectedDateRange!.start;
-      date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
-      date = date.add(Duration(days: 1))) {
+          date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
+          date = date.add(Duration(days: 1))) {
         int availableForDate = availableRooms?[date] ?? 0;
 
         if (availableForDate < roomCount) {
@@ -91,13 +93,14 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
 
       if (canBook) {
         try {
-          DocumentReference roomRef = FirebaseFirestore.instance.collection('Rooms').doc(widget.roomId);
+          DocumentReference roomRef =
+              FirebaseFirestore.instance.collection('Rooms').doc(widget.roomId);
           WriteBatch batch = FirebaseFirestore.instance.batch();
 
           // Update availability
           for (DateTime date = selectedDateRange!.start;
-          date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
-          date = date.add(Duration(days: 1))) {
+              date.isBefore(selectedDateRange!.end.add(Duration(days: 1)));
+              date = date.add(Duration(days: 1))) {
             String dateKey = date.toIso8601String().split("T").first;
             int currentAvailable = availableRooms?[date] ?? maxRoomCount;
 
@@ -105,8 +108,10 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
             DocumentSnapshot roomSnapshot = await roomRef.get();
 
             // Cast the snapshot data to a Map
-            Map<String, dynamic>? roomData = roomSnapshot.data() as Map<String, dynamic>?;
-            List<dynamic> currentIDs = roomData?['roomAvailability']?[dateKey]?['IDs'] ?? [];
+            Map<String, dynamic>? roomData =
+                roomSnapshot.data() as Map<String, dynamic>?;
+            List<dynamic> currentIDs =
+                roomData?['roomAvailability']?[dateKey]?['IDs'] ?? [];
 
             // Create a new list with the existing IDs plus the new user ID for the number of rooms booked
             List<dynamic> updatedIDs = List.from(currentIDs);
@@ -129,22 +134,30 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
           await batch.commit();
 
           // Store booking details
-          DatabaseReference bookingRef = FirebaseDatabase.instance.ref('Bookings/${widget.ownerId}/${currentUserId}').push();
+          DatabaseReference bookingRef = FirebaseDatabase.instance
+              .ref('Bookings/${widget.ownerId}/${currentUserId}')
+              .push();
+          DatabaseReference booking = FirebaseDatabase.instance
+              .ref('CustomerBookingDetails/${currentUserId}')
+              .push();
 
           Map<String, dynamic> bookingData = {
             'roomId': widget.roomId,
-            'startDate': selectedDateRange!.start.toIso8601String().split("T").first,
+            'days':totalDays,
+            'startDate':
+                selectedDateRange!.start.toIso8601String().split("T").first,
             'endDate': checkoutDate!.toIso8601String().split("T").first,
             'numberOfRooms': roomCount,
             'totalPrice': totalPrice,
             'timestamp': DateTime.now().toIso8601String(),
           };
 
+          await booking.set(bookingData);
           await bookingRef.set(bookingData).then((onValue) {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => BookingConfirmed()),
-                  (Route<dynamic> route) => false,
+              (Route<dynamic> route) => false,
             );
           });
         } catch (e) {
@@ -178,7 +191,10 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
     final ap = Provider.of<AuthProvider>(context, listen: false);
     final selectedStartDate = selectedDateRange?.start;
     final selectedEndDate = selectedDateRange?.end;
-    final totalDays = selectedDateRange!.end.difference(selectedDateRange!.start).inDays + 1 ?? 0;
+    final totalDays =
+        selectedDateRange!.end.difference(selectedDateRange!.start).inDays +
+                1 ??
+            0;
     final totalPrice = int.parse(widget.price) * roomCount * totalDays;
 
     showDialog(

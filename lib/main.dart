@@ -1,9 +1,11 @@
 
 import 'package:didirooms2/utils/global/global_variables.dart';
 import 'package:didirooms2/view/screens/login/splash.dart';
+import 'package:didirooms2/view_models/InternetConnectivity/dependency_injection.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -17,6 +19,7 @@ void main()async {
     }
   });
   runApp(const MyApp());
+  DependencyInjection.init();
 }
 
 class MyApp extends StatelessWidget {
@@ -28,7 +31,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_)=>AuthProvider()),
       ],
-      child: MaterialApp(
+      child: GetMaterialApp(
         title: 'Flutter Demo',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: mainColor),

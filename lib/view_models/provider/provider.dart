@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:didirooms2/view_models/Model/user_model.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -32,6 +33,42 @@ class AuthProvider extends ChangeNotifier {
 
   Position? _currentPosition;
   Position? get currentPosition => _currentPosition;
+  DatabaseReference bookingRef = FirebaseDatabase.instance.ref();
+
+  // This will hold the count of bookings
+  int _bookingCount = 0;
+
+  int get bookingCount => _bookingCount;
+
+
+
+  // Method to fetch bookings and update booking count
+  Future<void> fetchBookings() async {
+    try {
+      DataSnapshot snapshot = await bookingRef
+          .child('CustomerBookingDetails/${userModel.uid}')
+          .get();
+
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        _bookingCount = data.length; // Count bookings based on data length
+      } else {
+        _bookingCount = 0; // No bookings found
+      }
+
+      notifyListeners(); // Notify listeners about the change
+    } catch (e) {
+      print("Error fetching bookings: $e");
+      _bookingCount = 0; // Reset count on error
+      notifyListeners();
+    }
+  }
+
+  // Method to update the booking count
+  void updateBookingCount(int count) {
+    _bookingCount = count;
+    notifyListeners();
+  }
 
 
   LocationProvider() {

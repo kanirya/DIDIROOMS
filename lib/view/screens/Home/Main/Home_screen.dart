@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../utils/global/global_variables.dart';
 import '../Profile/profile.dart';
+import '../bookingDetails/booking_details.dart';
 
 class homeScreen extends StatefulWidget {
   const homeScreen({super.key});
@@ -25,6 +26,12 @@ class homeScreen extends StatefulWidget {
 class _homeScreenState extends State<homeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  void initState() {
+    super.initState();
+    // Fetch bookings when this screen initializes
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.fetchBookings(); // Fetch booking details
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -35,6 +42,8 @@ class _homeScreenState extends State<homeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final bookingCount = authProvider.bookingCount;
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -45,26 +54,53 @@ class _homeScreenState extends State<homeScreen> {
         },
         children: <Widget>[
           Page1Screen(),
-          Page2Screen(),
+          CustomerBookingDetails(),
           Page3Screen(),
           ProfileScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_max),
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.home_max,size: 30,),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.hotel),
-            label: 'Booking Details',
+
+            icon: Stack(
+              children: [
+                const Icon(Icons.book,size: 35,),
+                if (bookingCount > 0)
+                  Positioned(
+                    right: 0,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: BoxConstraints(
+                        maxWidth: 20,
+                        maxHeight: 20,
+                      ),
+                      child: Text(
+                        '$bookingCount',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: 'Bookings',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.filter_3),
             label: 'Page 3',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.userEdit),
             label: 'Profile',
           ),
