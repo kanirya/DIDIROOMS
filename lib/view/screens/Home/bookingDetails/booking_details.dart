@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CustomerBookingDetails extends StatefulWidget {
   @override
@@ -64,12 +65,12 @@ class _CustomerBookingDetailsState extends State<CustomerBookingDetails> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => BookingDetailScreen(
-                          days: booking['days'].toString(),
-                          roomId: booking['roomId'],
-                          total: booking['totalPrice'].toString(),
-                          rooms:booking['numberOfRooms'].toString()
-
-                        ),
+                            days: booking['days'].toString(),
+                            roomId: booking['roomId'],
+                            total: booking['totalPrice'].toString(),
+                            rooms: booking['numberOfRooms'].toString(),
+                        checkin: booking['startDate'],
+                        checkout: booking['endDate'],),
                       ),
                     );
                   },
@@ -81,7 +82,6 @@ class _CustomerBookingDetailsState extends State<CustomerBookingDetails> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
                           Text(
                             "Check In Date: ${booking['startDate']}",
                             style: GoogleFonts.poppins(fontSize: 16),
@@ -89,7 +89,8 @@ class _CustomerBookingDetailsState extends State<CustomerBookingDetails> {
                           Text(
                             "Check Out Date: ${booking['endDate']}",
                             style: GoogleFonts.poppins(fontSize: 16),
-                          ),Padding(
+                          ),
+                          Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -97,7 +98,8 @@ class _CustomerBookingDetailsState extends State<CustomerBookingDetails> {
                                 Text(
                                   "Days: ${booking['days']}",
                                   style: GoogleFonts.poppins(fontSize: 16),
-                                ), Text(
+                                ),
+                                Text(
                                   "Rooms: ${booking['numberOfRooms']}",
                                   style: GoogleFonts.poppins(fontSize: 16),
                                 ),
@@ -120,14 +122,23 @@ class _CustomerBookingDetailsState extends State<CustomerBookingDetails> {
   }
 }
 
-
 class BookingDetailScreen extends StatefulWidget {
   final String roomId; // Pass the roomId to fetch room details
-  final String days;   // Total days for the booking
+  final String days; // Total days for the booking
   final String total;
   final String rooms;
+  final String checkin;
+  final String checkout;
 
-  const BookingDetailScreen({super.key, required this.roomId, required this.days, required this.total, required this.rooms});
+  const BookingDetailScreen({
+    super.key,
+    required this.roomId,
+    required this.days,
+    required this.total,
+    required this.rooms,
+    required this.checkin,
+    required this.checkout,
+  });
 
   @override
   State<BookingDetailScreen> createState() => _BookingDetailScreenState();
@@ -135,6 +146,7 @@ class BookingDetailScreen extends StatefulWidget {
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Map<String, dynamic>? roomData;
+  Map<String, dynamic>? ownerData;
   bool isLoading = true;
 
   @override
@@ -154,6 +166,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (roomSnapshot.exists) {
         setState(() {
           roomData = roomSnapshot.data() as Map<String, dynamic>?;
+          _fetchOwnerDetails(roomData!['ownerId']); // Fetch owner details
           isLoading = false;
         });
       } else {
@@ -166,6 +179,24 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  // Fetch owner details from Firestore
+  Future<void> _fetchOwnerDetails(String ownerId) async {
+    try {
+      DocumentSnapshot ownerSnapshot = await FirebaseFirestore.instance
+          .collection('owners')
+          .doc(ownerId)
+          .get();
+
+      if (ownerSnapshot.exists) {
+        setState(() {
+          ownerData = ownerSnapshot.data() as Map<String, dynamic>?;
+        });
+      }
+    } catch (e) {
+      print('Error fetching owner details: $e');
     }
   }
 
@@ -183,61 +214,117 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           children: [
             Text(
               roomData!['roomType'] ?? 'Room Type',
-              style: TextStyle(
-                fontSize: 24,
+              style: GoogleFonts.poppins(
+                fontSize: 30,
                 fontWeight: FontWeight.bold,
+                color: Colors.amber,
               ),
             ),
             SizedBox(height: 10),
             Text(
-              'Rs ${roomData!['price']} per night',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.amber,
+              'Total Amount: Rs ${widget.total}',
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                color: Colors.black,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 10),
-            Text(
-              'Rs ${widget.total} Total',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.amber,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 10),
+            SizedBox(height: 8),
             Text(
               'Total Days: ${widget.days}',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 color: Colors.black,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 8),
             Text(
               'No of Rooms: ${widget.rooms}',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 color: Colors.black,
                 fontWeight: FontWeight.w600,
               ),
             ),
             SizedBox(height: 20),
-            Text(
-              'Location:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, color: Colors.amber),
+                SizedBox(width: 10),
+                Text(
+                  'Check-in: ${widget.checkin}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 5),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, color: Colors.amber),
+                SizedBox(width: 10),
+                Text(
+                  'Check-out: ${widget.checkout}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+
+            Divider(color: Colors.amber, thickness: 2),
+            SizedBox(height: 8),
             Text(
-              '${roomData!['location']['city']}, ${roomData!['location']['state']}',
-              style: TextStyle(fontSize: 16),
+              'Location:',
+              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 5),
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.amber, size: 30),
+                SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    '${roomData!['location']['city']}, ${roomData!['location']['street']}',
+                    style: GoogleFonts.poppins(fontSize: 18),
+                  ),
+                ),
+
+              ],
             ),
             SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.near_me, color: Colors.amber, size: 30),
+                SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    '${roomData!['location']['landmark']}',
+                    style: GoogleFonts.poppins(fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _openGoogleMaps,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+              ),
+              child: Text(
+                'Locate on Google Maps',
+                style: GoogleFonts.poppins(fontSize: 16),
+              ),
+            ),
+            SizedBox(height: 20),
+            Divider(color: Colors.amber, thickness: 2),
+            SizedBox(height: 8),
             Text(
               'Amenities:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Wrap(
@@ -245,9 +332,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               children: _buildAmenitiesIcons(),
             ),
             SizedBox(height: 20),
+            Divider(color: Colors.amber, thickness: 2),
+            SizedBox(height: 8),
             Text(
               'Images:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Container(
@@ -270,16 +359,60 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 },
               ),
             ),
+            SizedBox(height: 20),
+            _buildOwnerDetails(), // Show owner details
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _canCheckIn() ? _handleCheckIn : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _canCheckIn() ? Colors.amber : Colors.grey,
+                  ),
+                  child: Text(
+                    'Check In',
+                    style: GoogleFonts.poppins(fontSize: 16),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _canCheckOut() ? _handleCheckOut : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _canCheckOut() ? Colors.amber : Colors.grey,
+                  ),
+                  child: Text(
+                    'Check Out',
+                    style: GoogleFonts.poppins(fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
+  void _openGoogleMaps() async {
+    GeoPoint geoPoint = roomData!['latlng']; // Fetch the GeoPoint from Firestore
+    final latitude = geoPoint.latitude; // Get the latitude
+    final longitude = geoPoint.longitude; // Get the longitude
+
+    final url = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+
+
+
   // Build amenities list based on available services and display as icons
   List<Widget> _buildAmenitiesIcons() {
     List<Widget> amenitiesIcons = [];
-
     Map<String, dynamic>? services = roomData!['Services'];
 
     if (services != null) {
@@ -317,7 +450,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(iconData, color: Colors.amber, size: 30),
-                Text(service, style: TextStyle(fontSize: 12)),
+                Text(service, style: GoogleFonts.poppins(fontSize: 12)),
               ],
             ),
           );
@@ -329,21 +462,105 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
     return amenitiesIcons;
   }
+  Widget _buildOwnerDetails() {
+    if (ownerData == null) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text(
+          'Owner details not available.',
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.amber, width: 2),
+      ),
+      margin: EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundImage: NetworkImage(ownerData!['imageUrl']),
+                child: ownerData!['imageUrl'] == null
+                    ? Icon(Icons.person, size: 30, color: Colors.grey)
+                    : null,
+              ),
+              SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ownerData!['name'] ?? 'Owner Name',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      ownerData!['phone'] ?? 'Owner Phone',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+        ],
+      ),
+    );
+  }
+
+
+
+  // Check if the user can check-in
+  bool _canCheckIn() {
+    DateTime checkInDate = DateTime.parse(widget.checkin);
+    return DateTime.now().isAfter(checkInDate.subtract(Duration(hours: 12))) &&
+        DateTime.now().isBefore(checkInDate.add(Duration(days: 1)));
+  }
+
+  // Check if the user can check-out
+  bool _canCheckOut() {
+    DateTime checkOutDate = DateTime.parse(widget.checkout);
+    return DateTime.now().isBefore(checkOutDate.add(Duration(hours: 12))) &&
+        DateTime.now().isAfter(checkOutDate.subtract(Duration(days: 1)));
+  }
+
+  // Handle check-in action
+  void _handleCheckIn() {
+    // Implement check-in logic here
+    print('Check In Button Pressed');
+  }
+
+  // Handle check-out action
+  void _handleCheckOut() {
+    // Implement check-out logic here
+    print('Check Out Button Pressed');
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Booking Details'),
+        title: Text('Booking Details', style: GoogleFonts.poppins()),
         backgroundColor: Colors.amber,
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _buildRoomDetails(),
+      body: isLoading ? Center(child: CircularProgressIndicator()) : _buildRoomDetails(),
     );
   }
 }
-
-
-
-

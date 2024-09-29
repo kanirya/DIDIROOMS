@@ -60,6 +60,7 @@ dependencies:
   cached_network_image: ^3.0.0
   connectivity_plus: ^4.0.2
   get: ^4.6.6
+  url_launcher: ^6.3.0
 
 
 
