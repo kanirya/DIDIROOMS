@@ -135,7 +135,7 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
 
           // Store booking details
           DatabaseReference bookingRef = FirebaseDatabase.instance
-              .ref('Bookings/${widget.ownerId}/${currentUserId}')
+              .ref('Bookings/${widget.ownerId}')
               .push();
           DatabaseReference booking = FirebaseDatabase.instance
               .ref('CustomerBookingDetails/${currentUserId}')
