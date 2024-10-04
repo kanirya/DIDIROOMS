@@ -26,6 +26,7 @@ class homeScreen extends StatefulWidget {
 class _homeScreenState extends State<homeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+
   void initState() {
     super.initState();
     // Fetch bookings when this screen initializes
@@ -62,14 +63,19 @@ class _homeScreenState extends State<homeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           const BottomNavigationBarItem(
-            icon: Icon(Icons.home_max,size: 30,),
+            icon: Icon(
+              Icons.home_max,
+              size: 30,
+            ),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-
             icon: Stack(
               children: [
-                const Icon(Icons.book,size: 35,),
+                const Icon(
+                  Icons.book,
+                  size: 35,
+                ),
                 if (bookingCount > 0)
                   Positioned(
                     right: 0,
@@ -97,8 +103,11 @@ class _homeScreenState extends State<homeScreen> {
             label: 'Bookings',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.filter_3),
-            label: 'Page 3',
+            icon: Icon(
+              Icons.history_edu,
+              size: 37,
+            ),
+            label: 'History',
           ),
           const BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.userEdit),
@@ -117,7 +126,7 @@ class _homeScreenState extends State<homeScreen> {
 class Page1Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final ap=Provider.of<AuthProvider>(context,listen: false);
+    final ap = Provider.of<AuthProvider>(context, listen: false);
     return Scaffold(
         appBar: AppBar(
             centerTitle: true,
@@ -131,14 +140,22 @@ class Page1Screen extends StatelessWidget {
               Center(
                 child: InkWell(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SearchScreen(
-                          cityName: '',
-                        ),
-                      ),
-                    );
+                    Navigator.of(context).push(PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => SearchScreen(),
+                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                        const begin = Offset(0.0, 1.0); // Start from below the screen
+                        const end = Offset.zero; // End at the center of the screen
+                        const curve = Curves.easeInOut;
+
+                        final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                        final offsetAnimation = animation.drive(tween);
+
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child: child,
+                        );
+                      },
+                    ));
                   },
                   borderRadius: BorderRadius.circular(20.0),
                   splashColor: Colors.blueGrey.withOpacity(0.3),
@@ -181,20 +198,21 @@ class Page1Screen extends StatelessWidget {
                         circularPlaceCard(
                             placeName: "Near by",
                             function: () {
-                              ap.getCurrentLocation().then((onValue){
+                              ap.getCurrentLocation().then((onValue) {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => NearbyRoomsScreen(
-                                      Rlocation: LatLng(ap.currentPosition!.latitude, ap.currentPosition!.longitude),
+                                      Rlocation: LatLng(
+                                          ap.currentPosition!.latitude,
+                                          ap.currentPosition!.longitude),
                                     ),
                                   ),
                                 );
                               });
-
                             },
                             icon: Icons.near_me,
-                            backgroundColor: Color(0xffded2d2),
+                            backgroundColor: Colors.black12,
                             iconSize: 30,
                             iconColor: Colors.blue,
                             textColor: Colors.blue),
@@ -209,7 +227,7 @@ class Page1Screen extends StatelessWidget {
                                               LatLng(33.659357, 73.069142),
                                         )));
                           },
-                          icon: Icons.ac_unit_outlined,
+                          imageUrl: 'assets/images/islamabad.jpg'
                         ),
                       ],
                     ),
@@ -254,7 +272,7 @@ class Page1Screen extends StatelessWidget {
                 child: imageUrl != null // Check if imageUrl is provided
                     ? CircleAvatar(
                         radius: imageSize / 2,
-                        backgroundImage: NetworkImage(imageUrl),
+                        backgroundImage: AssetImage(imageUrl),
                       )
                     : Icon(
                         icon, // If no image, display the icon

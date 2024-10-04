@@ -380,6 +380,8 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
     }
   }
 
+
+
   // Check room availability within the selected date range
   Future<void> checkRoomAvailability() async {
     if (selectedDateRange != null) {

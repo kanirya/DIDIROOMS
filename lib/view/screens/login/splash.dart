@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
 import '../../../view_models/provider/provider.dart';
 import '../Home/Main/Home_screen.dart';
 import 'login.dart';
@@ -49,21 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
               height: 150,
             ),
             const SizedBox(height: 20,),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Let\'s',style:GoogleFonts.merriweather(
-                  fontSize: 22,
-                  color: Colors.black,
-                ),),
-                Text(' Travel',style: GoogleFonts.dancingScript(
-                  fontSize: 25,
-                  color: Colors.black,
-                ),),
 
-
-              ],
-            )
           ],
         ),
       ),

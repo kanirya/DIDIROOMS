@@ -6,6 +6,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../res/components/button_components.dart';
+import 'extend_date.dart';
+
 class CustomerBookingDetails extends StatefulWidget {
   @override
   _CustomerBookingDetailsState createState() => _CustomerBookingDetailsState();
@@ -65,12 +68,13 @@ class _CustomerBookingDetailsState extends State<CustomerBookingDetails> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => BookingDetailScreen(
-                            days: booking['days'].toString(),
-                            roomId: booking['roomId'],
-                            total: booking['totalPrice'].toString(),
-                            rooms: booking['numberOfRooms'].toString(),
-                        checkin: booking['startDate'],
-                        checkout: booking['endDate'],),
+                          days: booking['days'].toString(),
+                          roomId: booking['roomId'],
+                          total: booking['totalPrice'].toString(),
+                          rooms: booking['numberOfRooms'].toString(),
+                          checkin: booking['startDate'],
+                          checkout: booking['endDate'],
+                        ),
                       ),
                     );
                   },
@@ -279,7 +283,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             SizedBox(height: 8),
             Text(
               'Location:',
-              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                  fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 5),
             Row(
@@ -292,7 +297,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     style: GoogleFonts.poppins(fontSize: 18),
                   ),
                 ),
-
               ],
             ),
             SizedBox(height: 10),
@@ -324,7 +328,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             SizedBox(height: 8),
             Text(
               'Amenities:',
-              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                  fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Wrap(
@@ -336,7 +341,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             SizedBox(height: 8),
             Text(
               'Images:',
-              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                  fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Container(
@@ -360,7 +366,25 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ),
             ),
             SizedBox(height: 20),
-            _buildOwnerDetails(), // Show owner details
+            _buildOwnerDetails(),
+            SizedBox(height: 20),
+            CustomButton(
+              color: Colors.black,
+              text: "Extend your stay",
+              cornerRadius: 4,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ExtendBookingScreen(
+                      checkoutDate: widget.checkout,
+                      beforeCost: double.parse(widget.total),
+                      dailyRate: double.parse(roomData!['price']),
+                    ),
+                  ),
+                );
+              },
+            ),
             SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -378,7 +402,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 ElevatedButton(
                   onPressed: _canCheckOut() ? _handleCheckOut : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _canCheckOut() ? Colors.amber : Colors.grey,
+                    backgroundColor:
+                        _canCheckOut() ? Colors.amber : Colors.grey,
                   ),
                   child: Text(
                     'Check Out',
@@ -394,11 +419,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   void _openGoogleMaps() async {
-    GeoPoint geoPoint = roomData!['latlng']; // Fetch the GeoPoint from Firestore
+    GeoPoint geoPoint =
+        roomData!['latlng']; // Fetch the GeoPoint from Firestore
     final latitude = geoPoint.latitude; // Get the latitude
     final longitude = geoPoint.longitude; // Get the longitude
 
-    final url = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+    final url =
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
 
     if (await canLaunch(url)) {
       await launch(url);
@@ -406,9 +433,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       throw 'Could not launch $url';
     }
   }
-
-
-
 
   // Build amenities list based on available services and display as icons
   List<Widget> _buildAmenitiesIcons() {
@@ -462,6 +486,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
     return amenitiesIcons;
   }
+
   Widget _buildOwnerDetails() {
     if (ownerData == null) {
       return Padding(
@@ -519,13 +544,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ),
             ],
           ),
-
         ],
       ),
     );
   }
-
-
 
   // Check if the user can check-in
   bool _canCheckIn() {
@@ -560,7 +582,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         title: Text('Booking Details', style: GoogleFonts.poppins()),
         backgroundColor: Colors.amber,
       ),
-      body: isLoading ? Center(child: CircularProgressIndicator()) : _buildRoomDetails(),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _buildRoomDetails(),
     );
   }
 }
