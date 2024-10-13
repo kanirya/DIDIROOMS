@@ -1,17 +1,12 @@
-import 'dart:developer';
-
 import 'package:awesome_icons/awesome_icons.dart';
 import 'package:didirooms2/view/screens/Home/Main/room_search.dart';
 import 'package:didirooms2/view/screens/Home/Main/search_place.dart';
 import 'package:didirooms2/view_models/provider/provider.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../utils/global/global_variables.dart';
 import '../Profile/profile.dart';
 import '../bookingDetails/booking_details.dart';
@@ -128,115 +123,120 @@ class Page1Screen extends StatelessWidget {
   Widget build(BuildContext context) {
     final ap = Provider.of<AuthProvider>(context, listen: false);
     return Scaffold(
-        appBar: AppBar(
-            centerTitle: true,
-            title: SvgPicture.asset(
-              "assets/images/DIDIrooms.svg",
-              color: mainColor,
-            )),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              Center(
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) => SearchScreen(),
-                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                        const begin = Offset(0.0, 1.0); // Start from below the screen
-                        const end = Offset.zero; // End at the center of the screen
-                        const curve = Curves.easeInOut;
+      appBar: AppBar(
+          centerTitle: true,
+          title: SvgPicture.asset(
+            "assets/images/DIDIrooms.svg",
+            color: mainColor,
+          )),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Center(
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).push(PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        SearchScreen(),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      const begin =
+                          Offset(0.0, 1.0); // Start from below the screen
+                      const end =
+                          Offset.zero; // End at the center of the screen
+                      const curve = Curves.easeInOut;
 
-                        final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                        final offsetAnimation = animation.drive(tween);
+                      final tween = Tween(begin: begin, end: end)
+                          .chain(CurveTween(curve: curve));
+                      final offsetAnimation = animation.drive(tween);
 
-                        return SlideTransition(
-                          position: offsetAnimation,
-                          child: child,
-                        );
-                      },
-                    ));
-                  },
-                  borderRadius: BorderRadius.circular(20.0),
-                  splashColor: Colors.blueGrey.withOpacity(0.3),
-                  child: Container(
-                    width: MediaQuery.of(context).size.width * .9,
-                    height: 40,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: Colors.grey[250],
-                        border: Border.all(width: 1)),
-                    constraints: BoxConstraints(maxWidth: 400, minWidth: 300),
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            FontAwesomeIcons.searchLocation,
-                            size: 18,
-                          ),
+                      return SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      );
+                    },
+                  ));
+                },
+                borderRadius: BorderRadius.circular(20.0),
+                splashColor: Colors.blueGrey.withOpacity(0.3),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * .9,
+                  height: 40,
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.grey[250],
+                      border: Border.all(width: 1)),
+                  constraints: BoxConstraints(maxWidth: 400, minWidth: 300),
+                  child: const Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(
+                          FontAwesomeIcons.searchLocation,
+                          size: 18,
                         ),
-                        Text('Search for city, location or hotel')
-                      ],
-                    ),
+                      ),
+                      Text('Search for city, location or hotel')
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(
-                height: 10,
-              ),
-              Container(
-                height: 100,
-                width: double.infinity, // Max width
-
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        circularPlaceCard(
-                            placeName: "Near by",
-                            function: () {
-                              ap.getCurrentLocation().then((onValue) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => NearbyRoomsScreen(
-                                      Rlocation: LatLng(
-                                          ap.currentPosition!.latitude,
-                                          ap.currentPosition!.longitude),
-                                    ),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            Container(
+              height: 100,
+              width: double.infinity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      circularPlaceCard(
+                          placeName: "Near by",
+                          function: () {
+                            ap.getCurrentLocation().then((onValue) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NearbyRoomsScreen(
+                                    Rlocation: LatLng(
+                                        ap.currentPosition!.latitude,
+                                        ap.currentPosition!.longitude),
                                   ),
-                                );
-                              });
-                            },
-                            icon: Icons.near_me,
-                            backgroundColor: Colors.black12,
-                            iconSize: 30,
-                            iconColor: Colors.blue,
-                            textColor: Colors.blue),
-                        circularPlaceCard(
+                                ),
+                              );
+                            });
+                          },
+                          icon: Icons.near_me,
+                          backgroundColor: Colors.black12,
+                          iconSize: 30,
+                          iconColor: Colors.blue,
+                          textColor: Colors.blue),
+                      circularPlaceCard(
                           placeName: "Islamabad",
                           function: () {
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => NearbyRoomsScreen(
-                                          Rlocation:
-                                              LatLng(33.659357, 73.069142),
-                                        )));
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NearbyRoomsScreen(
+                                  Rlocation: LatLng(33.659357, 73.069142),
+                                ),
+                              ),
+                            );
                           },
-                          imageUrl: 'assets/images/islamabad.jpg'
-                        ),
-                      ],
-                    ),
+                          imageUrl: 'assets/images/islamabad.jpg'),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ));
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget circularPlaceCard({
