@@ -115,10 +115,8 @@ class _RoomBookingCalendarState extends State<RoomBookingCalendar> {
 
             // Create a new list with the existing IDs plus the new user ID for the number of rooms booked
             List<dynamic> updatedIDs = List.from(currentIDs);
-
-            for (int i = 0; i < roomCount; i++) {
               updatedIDs.add(currentUserId); // Add the user ID multiple times
-            }
+
 
             // Update the room availability
             Map<String, dynamic> updatedAvailability = {

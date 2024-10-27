@@ -26,7 +26,7 @@ class _homeScreenState extends State<homeScreen> {
     super.initState();
     // Fetch bookings when this screen initializes
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.fetchBookings(); // Fetch booking details
+    authProvider.fetchBookings();
   }
 
   void _onItemTapped(int index) {

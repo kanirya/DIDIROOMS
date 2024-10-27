@@ -35,6 +35,50 @@ class _NearbyRoomsScreenState extends State<NearbyRoomsScreen> {
     _fetchRoomTypes();
   }
 
+
+
+
+  Future<List<Map<String, dynamic>>> _fetchNearbyRooms() async {
+    QuerySnapshot snapshot = await roomsRef.get();
+    List<Map<String, dynamic>> nearbyRooms = [];
+
+    for (var doc in snapshot.docs) {
+      GeoPoint roomLocation = doc['latlng'];
+      double distance = calculateDistance(
+        widget.Rlocation.latitude,
+        widget.Rlocation.longitude,
+        roomLocation.latitude,
+        roomLocation.longitude,
+      );
+
+      // Check if 'price' is stored as an int or String and handle accordingly
+      int roomPrice;
+      if (doc['price'] is int) {
+        roomPrice = doc['price'];
+      } else if (doc['price'] is String) {
+        roomPrice = int.parse(doc['price']);
+      } else {
+
+        continue;
+      }
+
+      // Filter rooms based on distance, room type, and price range
+      if (distance <= 25 &&
+          (_selectedRoomType == 'All' || doc['roomType'] == _selectedRoomType) &&
+          roomPrice >= _selectedPriceRange.start &&
+          roomPrice <= _selectedPriceRange.end) {
+        nearbyRooms.add({
+          'room': doc,
+          'distance': distance,
+        });
+      }
+    }
+
+    _sortRooms(nearbyRooms);
+
+    return nearbyRooms;
+  }
+
   // Fetch room types from Firestore and update roomTypes list
   Future<void> _fetchRoomTypes() async {
     QuerySnapshot snapshot = await roomsRef.get();
@@ -69,34 +113,6 @@ class _NearbyRoomsScreenState extends State<NearbyRoomsScreen> {
     return degrees * pi / 180;
   }
 
-  Future<List<Map<String, dynamic>>> _fetchNearbyRooms() async {
-    QuerySnapshot snapshot = await roomsRef.get();
-    List<Map<String, dynamic>> nearbyRooms = [];
-
-    for (var doc in snapshot.docs) {
-      GeoPoint roomLocation = doc['latlng'];
-      double distance = calculateDistance(
-        widget.Rlocation.latitude,
-        widget.Rlocation.longitude,
-        roomLocation.latitude,
-        roomLocation.longitude,
-      );
-      int roomPrice = int.parse(doc['price']);
-      if (distance <= 25 &&
-          (_selectedRoomType == 'All' || doc['roomType'] == _selectedRoomType) &&
-          roomPrice >= _selectedPriceRange.start &&
-          roomPrice <= _selectedPriceRange.end) {
-        nearbyRooms.add({
-          'room': doc,
-          'distance': distance,
-        });
-      }
-    }
-
-    _sortRooms(nearbyRooms);
-
-    return nearbyRooms;
-  }
 
   void _sortRooms(List<Map<String, dynamic>> rooms) {
     if (_selectedSortOption == 'Nearest') {
